@@ -1,8 +1,10 @@
 // context/AppContext.js
 import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import { Audio } from 'expo-av';
+import * as Haptics from 'expo-haptics';
+import { useNavigation } from '@react-navigation/native'; // Import the hook
+
 const STORAGE_KEY = 'myAppSettings'; // or any unique string
 
 const AppContext = createContext();
@@ -10,6 +12,8 @@ const AppContext = createContext();
 export const useAppContext = () => useContext(AppContext);
 
 export const AppContextProvider = ({ children }) => {
+  const navigation = useNavigation(); // Get the navigation object
+
   const [platform, setPlatform] = useState('ios');
   const [callerName, setCallerName] = useState('');
   const [callDuration, setCallDuration] = useState(0);
@@ -26,7 +30,7 @@ export const AppContextProvider = ({ children }) => {
   const [isCallActive, setIsCallActive] = useState(false);
   const [isIntroPlaying, setIsIntroPlaying] = useState(false);
   const [pendingSelectionAudio, setPendingSelectionAudio] = useState(null);
-  
+
   const [audioMap, setAudioMap] = useState({
     'introduccion': null,
     'A': null, '2': null, '3': null, '4': null, '5': null,
@@ -35,11 +39,11 @@ export const AppContextProvider = ({ children }) => {
     'treboles': null, 'corazones': null, 'picas': null, 'diamantes': null,
     'despedida': null
   });
-  
+
   const sound = useRef(null);
   const callInterval = useRef(null);
   const optionInterval = useRef(null);
-  
+
   const cardValues = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
   const cardSuits = ['treboles', 'corazones', 'picas', 'diamantes'];
   const suitSymbols = { 'treboles': 'T', 'corazones': 'C', 'picas': 'P', 'diamantes': 'D' };
@@ -100,7 +104,7 @@ export const AppContextProvider = ({ children }) => {
       })();
     }
   }, [isIntroPlaying, pendingSelectionAudio]);
-  
+
   useEffect(() => {
     return () => {
       if (callInterval.current) clearInterval(callInterval.current);
@@ -108,7 +112,7 @@ export const AppContextProvider = ({ children }) => {
       if (sound.current) sound.current.unloadAsync();
     };
   }, []);
-  
+
   const playSound = async (key) => {
     const uri = audioMap[key];
     if (!uri) return;
@@ -137,25 +141,25 @@ export const AppContextProvider = ({ children }) => {
       return Promise.resolve(); // Return resolved promise on error
     }
   };
-  
-  const startCall = async (navigation) => {
+
+  const startCall = async () => {
     // Only start a call if one isn't already active
     if (isCallActive) return;
-    
+
     setIsCallActive(true);
     navigation.navigate('Call');
     setCallDuration(0);
-    
+
     // Start call timer
     callInterval.current = setInterval(() => {
       setCallDuration(prev => prev + 1);
     }, 1000);
-    
+
     // Start selection phase immediately
     setIsSelectionPhase(true);
     setSelectionStage('value');
     resetOptionCycle(cardValues, 'A');
-    
+
     // Play introduction audio and set flag
     setIsIntroPlaying(true);
     playSound('introduccion').then(() => {
@@ -165,47 +169,48 @@ export const AppContextProvider = ({ children }) => {
       setIsIntroPlaying(false);
     });
   };
-  
+
   const resetOptionCycle = (options, initialOption) => {
     setCurrentOption(initialOption);
-    
+
     // Clear previous interval if exists
     if (optionInterval.current) {
       clearInterval(optionInterval.current);
     }
-    
+
     // Cycle through options every 2.5 seconds
     let index = options.indexOf(initialOption);
     optionInterval.current = setInterval(() => {
       index = (index + 1) % options.length;
       setCurrentOption(options[index]);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Vibrate on option switch
     }, 2500);
   };
-  
-  const endCall = async (navigation) => {
+
+  const endCall = async () => {
     // Only end the call if a call is active
     if (!isCallActive) return;
-    
+
     // Stop timers
     if (callInterval.current) clearInterval(callInterval.current);
     if (optionInterval.current) clearInterval(optionInterval.current);
-    
+
     // Play goodbye audio
     await playSound('despedida');
-    
-    // Navigate to end screen
-    navigation.navigate('Contact')
 
     resetGame();
-    
-    // Reset for next call
+
+    // Navigate back to the contact screen
+    navigation.navigate('Contact');
+
+    // Reset for next call (redundant here as resetGame is called, but for clarity)
     setIsCallActive(false);
     setIsSelectionPhase(false);
     setSelectionStage('value');
     setCallDuration(0);
     setPendingSelectionAudio(null);
   };
-  
+
   const resetGame = () => {
     setCardValue(null);
     setCardSuit(null);
@@ -215,17 +220,17 @@ export const AppContextProvider = ({ children }) => {
     setSelectionStage('value');
     setIsIntroPlaying(false);
     setPendingSelectionAudio(null);
-    
+
     // Clear any ongoing intervals
     if (callInterval.current) clearInterval(callInterval.current);
     if (optionInterval.current) clearInterval(optionInterval.current);
   };
-  
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
     const secs = seconds % 60;
     const secsStr = secs.toString().padStart(2, '0');
-    
+
     // During selection phase, show the current option in place of last digit
     if (isSelectionPhase) {
       if (selectionStage === 'value') {
@@ -234,27 +239,28 @@ export const AppContextProvider = ({ children }) => {
         return `${mins}:${secsStr.charAt(0)}${suitSymbols[currentOption] || currentOption.charAt(0)}`;
       }
     }
-    
+
     // Always show standard time format after selection is made
     return `${mins}:${secsStr}`;
   };
-  
-  const handleScreenTap = async (navigation) => {
+
+  const handleScreenTap = async () => {
     const now = Date.now();
+    const isCallScreen = navigation.getState()?.routes.find(route => route.name === 'Call');
 
     // Detect double-tap (500ms threshold)
     if (now - lastTapTime < 500) {
-      // If we're not in a call yet, start one
-      if (!isCallActive) {
-        await startCall(navigation);
+      // If NOT on the call screen and NOT active, start a call
+      if (!isCallScreen && !isCallActive) {
+        await startCall();
       }
-      // If we're in a call and selection is complete, end it
-      else if (isCallActive && selectionStage === 'complete') {
-        await endCall(navigation);
+      // If ON the call screen and IS active, end the call
+      else if (isCallScreen && isCallActive && selectionStage === 'complete') {
+        await endCall();
       }
     }
-    // Single taps during an active call drive the selection phase
-    else if (isCallActive && isSelectionPhase) {
+    // Single taps during an active call on the call screen drive the selection phase
+    else if (isCallScreen && isCallActive && isSelectionPhase) {
       if (selectionStage === 'value') {
         setCardValue(currentOption);
         setSelectionStage('suit');
@@ -285,7 +291,7 @@ export const AppContextProvider = ({ children }) => {
 
     setLastTapTime(now);
   };
-  
+
   const value = {
     platform,
     setPlatform,
@@ -319,6 +325,6 @@ export const AppContextProvider = ({ children }) => {
     isCallActive,
     isIntroPlaying
   };
-  
+
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

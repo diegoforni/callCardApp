@@ -1,4 +1,3 @@
-// App.js
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -17,8 +16,8 @@ const Stack = createStackNavigator();
 
 export default function App() {
   return (
-    <AppContextProvider>
-      <NavigationContainer>
+    <NavigationContainer>
+      <AppContextProvider>
         <StatusBar style="auto" />
         <Stack.Navigator initialRouteName="Setup" screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Setup" component={SetupScreen} />
@@ -26,7 +25,7 @@ export default function App() {
           <Stack.Screen name="Call" component={CallScreen} />
           <Stack.Screen name="End" component={EndScreen} />
         </Stack.Navigator>
-      </NavigationContainer>
-    </AppContextProvider>
+      </AppContextProvider>
+    </NavigationContainer>
   );
 }
