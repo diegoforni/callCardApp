@@ -13,13 +13,24 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "We need to record audio for your call emulator.",
+        "NSPhotoLibraryUsageDescription": "We need to access your library to pick call/contact images.",
+        "NSPhotoLibraryAddUsageDescription": "We need to save edited images back to your library.",
+        "NSDocumentsFolderUsageDescription": "We need to store and load audio recordings."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      }, 
+      "permissions": [
+        "RECORD_AUDIO",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

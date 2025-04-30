@@ -10,7 +10,7 @@ import {
   Modal,
   Button,
   SafeAreaView,
-  Image, // Import the Image component
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
@@ -19,6 +19,7 @@ import * as FileSystem from 'expo-file-system';
 import { useAppContext } from '../context/AppContext';
 import AudioItem from '../components/AudioItem.js';
 import InstructionsPanel from '../components/InstructionsPanel';
+import * as DocumentPicker from 'expo-document-picker';
 
 export default function SetupScreen({ navigation }) {
   const {
@@ -33,9 +34,9 @@ export default function SetupScreen({ navigation }) {
     setShowGameInstructions,
     cardValues,
     cardSuits,
-    contactImage, // Get contactImage from context
+    contactImage,
     setContactImage,
-    callImage, // Get callImage from context
+    callImage,
     setCallImage
   } = useAppContext();
 
@@ -67,7 +68,6 @@ export default function SetupScreen({ navigation }) {
     await recording.stopAndUnloadAsync();
     const uri = recording.getURI();
 
-    // Update audioMap with new recording
     if (recordingItem && uri) {
       setAudioMap(prev => ({
         ...prev,
@@ -80,27 +80,18 @@ export default function SetupScreen({ navigation }) {
 
   const pickAudioFile = async (item) => {
     try {
-      const result = await ImagePicker.launchDocumentAsync({
+      const result = await DocumentPicker.getDocumentAsync({
         type: 'audio/*',
         copyToCacheDirectory: true,
       });
 
-      if (!result.canceled && result.assets && result.assets[0]) {
-        const selectedUri = result.assets[0].uri;
+      if (result.type === 'success') {
+        const selectedUri = result.uri;
+        const ext = selectedUri.split('.').pop();
+        const localUri = FileSystem.documentDirectory + item + '.' + ext;
 
-        // Create a local copy in app's document directory
-        const fileExtension = selectedUri.split('.').pop();
-        const localUri = FileSystem.documentDirectory + item + '.' + fileExtension;
-
-        await FileSystem.copyAsync({
-          from: selectedUri,
-          to: localUri
-        });
-
-        setAudioMap(prev => ({
-          ...prev,
-          [item]: localUri
-        }));
+        await FileSystem.copyAsync({ from: selectedUri, to: localUri });
+        setAudioMap(prev => ({ ...prev, [item]: localUri }));
       }
     } catch (err) {
       console.error('Error picking audio file:', err);
@@ -130,36 +121,33 @@ export default function SetupScreen({ navigation }) {
   };
 
   const startGame = () => {
-    // Validate required fields before starting
-    if (callerName && audioMap.introduccion && audioMap.despedida &&
-        callerName.trim() !== '') {
+    if ( audioMap.introduccion && audioMap.despedida ) {
       setShowGameInstructions(true);
       navigation.navigate('Contact');
     } else {
-      alert('Please fill all required fields (caller name, introduction audio, and conclusion audio)');
+      alert('Por favor, completa todos los campos requeridos (nombre del llamante, audio de introducción y audio de despedida)');
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
-        <Text style={styles.title}>Call Emulator Setup</Text>
+        <Text style={styles.title}>Configuración CallCard</Text>
 
         <InstructionsPanel
           visible={showSetupInstructions}
           setVisible={setShowSetupInstructions}
-          title="Setup Instructions:"
+          title="Instrucciones de Configuración:"
           text={
-            `1. Choose your platform: iOS or Android\n` +
-            `2. Enter the caller's name\n` +
-            `3. Upload call images for your platform\n` +
-            `4. Add audio files for each card value and suit\n` +
-            `5. Add audio files for introduction and conclusion`
+            `1. Elige tu plataforma: iOS o Android\n` +
+            `2. Sube las imágenes de llamada para tu plataforma\n` +
+            `3. Agrega archivos de audio para cada valor y pinta de carta\n` +
+            `4. Agrega audios de introducción y conclusión`
           }
         />
 
         <View style={styles.platformSelector}>
-          <Text style={styles.label}>Select Platform:</Text>
+          <Text style={styles.label}>Selecciona la Plataforma:</Text>
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={[styles.platformButton, platform === 'ios' && styles.selectedButton]}
@@ -176,25 +164,15 @@ export default function SetupScreen({ navigation }) {
           </View>
         </View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Caller Name:</Text>
-          <TextInput
-            style={styles.input}
-            value={callerName}
-            onChangeText={setCallerName}
-            placeholder="Enter caller name"
-          />
-        </View>
-
         <View style={styles.imageSection}>
-          <Text style={styles.sectionTitle}>Call Images</Text>
+          <Text style={styles.sectionTitle}>Imágenes de Llamada</Text>
           <View style={styles.imageButtonRow}>
             <View style={styles.imageUploadContainer}>
               <TouchableOpacity
                 style={styles.imageButton}
                 onPress={() => pickImage('contact')}
               >
-                <Text style={styles.imageButtonText}>Upload Contact Image</Text>
+                <Text style={styles.imageButtonText}>Subir Imagen de Contacto</Text>
               </TouchableOpacity>
               {contactImage && (
                 <Image source={{ uri: contactImage }} style={styles.previewImage} />
@@ -205,7 +183,7 @@ export default function SetupScreen({ navigation }) {
                 style={styles.imageButton}
                 onPress={() => pickImage('call')}
               >
-                <Text style={styles.imageButtonText}>Upload Call Image</Text>
+                <Text style={styles.imageButtonText}>Subir Imagen de Llamada</Text>
               </TouchableOpacity>
               {callImage && (
                 <Image source={{ uri: callImage }} style={styles.previewImage} />
@@ -215,10 +193,10 @@ export default function SetupScreen({ navigation }) {
         </View>
 
         <View style={styles.audioSection}>
-          <Text style={styles.sectionTitle}>Audio Files</Text>
+          <Text style={styles.sectionTitle}>Archivos de Audio</Text>
 
           <View style={styles.audioCategory}>
-            <Text style={styles.categoryTitle}>Required</Text>
+            <Text style={styles.categoryTitle}>Requeridos</Text>
             <View style={styles.audioGrid}>
               <AudioItem
                 label="Introducción"
@@ -243,7 +221,7 @@ export default function SetupScreen({ navigation }) {
           </View>
 
           <View style={styles.audioCategory}>
-            <Text style={styles.categoryTitle}>Card Values</Text>
+            <Text style={styles.categoryTitle}>Valores de Carta</Text>
             <View style={styles.audioGrid}>
               {cardValues.map(value => (
                 <AudioItem
@@ -261,7 +239,7 @@ export default function SetupScreen({ navigation }) {
           </View>
 
           <View style={styles.audioCategory}>
-            <Text style={styles.categoryTitle}>Card Suits</Text>
+            <Text style={styles.categoryTitle}>Pintas de Carta</Text>
             <View style={styles.audioGrid}>
               {cardSuits.map(suit => (
                 <AudioItem
@@ -287,11 +265,10 @@ export default function SetupScreen({ navigation }) {
           onPress={startGame}
           disabled={!callerName || !audioMap.introduccion || !audioMap.despedida}
         >
-          <Text style={styles.startButtonText}>Start Game</Text>
+          <Text style={styles.startButtonText}>Iniciar Juego</Text>
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Recording Modal */}
       <Modal
         visible={recordModal}
         transparent={true}
@@ -299,21 +276,21 @@ export default function SetupScreen({ navigation }) {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Record Audio for {recordingItem}</Text>
+            <Text style={styles.modalTitle}>Grabar Audio para {recordingItem}</Text>
 
             <TouchableOpacity
               style={[styles.recordButton, recording && styles.stopRecordingButton]}
               onPress={recording ? stopRecording : startRecording}
             >
               <Text style={styles.recordButtonText}>
-                {recording ? 'Stop Recording' : 'Start Recording'}
+                {recording ? 'Detener Grabación' : 'Iniciar Grabación'}
               </Text>
             </TouchableOpacity>
 
             {recording && (
               <View style={styles.recordingIndicator}>
                 <Ionicons name="radio-outline" size={20} color="#ff0000" />
-                <Text style={styles.recordingText}>Recording...</Text>
+                <Text style={styles.recordingText}>Grabando...</Text>
               </View>
             )}
 
@@ -325,7 +302,7 @@ export default function SetupScreen({ navigation }) {
                 setRecordModal(false);
               }}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>Cancelar</Text>
             </TouchableOpacity>
           </View>
         </View>

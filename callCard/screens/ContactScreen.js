@@ -28,7 +28,6 @@ export default function ContactScreen() {
     android: require('../assets/android_contact_default.png'),
     
   };
-  console.log("Contact Image URI:", contactImage);
   return (
     <View style={styles.container}>
       <StatusBar hidden />
@@ -41,13 +40,14 @@ export default function ContactScreen() {
           <InstructionsPanel
             visible={showGameInstructions}
             setVisible={setShowGameInstructions}
-            title="Game Instructions:"
+            title="Instrucciones del juego:"
             text={
-              `1. Double-tap anywhere to start the call\n` +
-              `2. When card values appear, tap once to select (A-K)\n` +
-              `3. When card suits appear, tap once to select\n` +
-              `4. Double-tap after selection to end the call`
+              `1. Toque dos veces en cualquier lugar para iniciar la llamada\n` +
+              `2. Cuando aparezcan los valores de las cartas, toque una vez para seleccionar (A–K)\n` +
+              `3. Cuando aparezcan los palos de las cartas, toque una vez para seleccionar\n` +
+              `4. Toque dos veces después de la selección para finalizar la llamada`
             }
+            
             overlay={true}
           />
         )}

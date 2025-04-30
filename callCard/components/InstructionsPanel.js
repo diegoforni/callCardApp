@@ -22,7 +22,7 @@ export default function InstructionsPanel({ visible, setVisible, title, text, ov
         <View style={styles.overlayContent}>
           <Text style={styles.instructionsTitle}>{title}</Text>
           <Text style={styles.instructionsText}>{text}</Text>
-          <Button title="Got it!" onPress={() => setVisible(false)} />
+          <Button title="Entendido!" onPress={() => setVisible(false)} />
         </View>
       </View>
     );
@@ -32,7 +32,7 @@ export default function InstructionsPanel({ visible, setVisible, title, text, ov
     <View style={styles.instructionsContainer}>
       <Text style={styles.instructionsTitle}>{title}</Text>
       <Text style={styles.instructionsText}>{text}</Text>
-      <Button title="Hide Instructions" onPress={() => setVisible(false)} />
+      <Button title="Esconder" onPress={() => setVisible(false)} />
     </View>
   );
 }

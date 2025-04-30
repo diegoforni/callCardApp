@@ -160,14 +160,36 @@ export const AppContextProvider = ({ children }) => {
     setSelectionStage('value');
     resetOptionCycle(cardValues, 'A');
 
-    // Play introduction audio and set flag
+    // Then play intro audio and set flag
     setIsIntroPlaying(true);
-    playSound('introduccion').then(() => {
+    // Play calling sound first
+    try {
+      // Create a separate sound instance for the calling sound
+      const callingSound = new Audio.Sound();
+      await callingSound.loadAsync(require('../assets/calling.mp3'));
+      await callingSound.playAsync();
+      
+      // Wait for calling sound to finish
+      await new Promise((resolve) => {
+        callingSound.setOnPlaybackStatusUpdate((status) => {
+          if (status.didJustFinish) {
+            callingSound.unloadAsync(); // Clean up after playing
+            resolve();
+          }
+        });
+      });
+      
+
+      playSound('introduccion').then(() => {
+        setIsIntroPlaying(false);
+      }).catch(err => {
+        console.error('Error playing intro:', err);
+        setIsIntroPlaying(false);
+      });
+    } catch (err) {
+      console.error('Error playing call audio:', err);
       setIsIntroPlaying(false);
-    }).catch(err => {
-      console.error('Error playing intro:', err);
-      setIsIntroPlaying(false);
-    });
+    }
   };
 
   const resetOptionCycle = (options, initialOption) => {

@@ -13,14 +13,14 @@ export default function AudioItem({ label, onSelect, onRecord, hasAudio }) {
           onPress={onSelect}
         >
           <Ionicons name="document-outline" size={16} color="#333" />
-          <Text style={styles.buttonLabel}>Select</Text>
+          <Text style={styles.buttonLabel}>Subir</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.audioButton}
           onPress={onRecord}
         >
           <Ionicons name="mic-outline" size={16} color="#333" />
-          <Text style={styles.buttonLabel}>Record</Text>
+          <Text style={styles.buttonLabel}>Grabar</Text>
         </TouchableOpacity>
       </View>
       {hasAudio && (
